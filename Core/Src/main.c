@@ -22,12 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-//#include "lcd.h"
-#include "bmp280.h"
-uint16_t raw;
-float temperature, pressure, humidity;
-char msg[100];
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,7 +48,7 @@ ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptor
 
 ETH_HandleTypeDef heth;
 
-SPI_HandleTypeDef hspi1;
+TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart3;
 
@@ -69,9 +64,16 @@ static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
-static void MX_SPI1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
+void set_servo_angle(uint16_t angle)
+{
+    // Переводим угол в длительность импульса (1-2 мс)
+    float pulse_width =2*(1.0 + (angle / 180.0) * 1.0); // Ширина импульса в мс
+   //uint16_t ccr_value = (pulse_width / 20.0) * 20000; // Рассчитываем значение CCR
 
+    TIM2->CCR1 = (uint16_t)pulse_width; // Устанавливаем значение CCR
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -86,7 +88,6 @@ static void MX_SPI1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	uint8_t buf[12];
 
   /* USER CODE END 1 */
 
@@ -111,72 +112,25 @@ int main(void)
   MX_ETH_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
-  MX_SPI1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-//
-//  LCD_HandleTypeDef lcd;
-//  lcd.i2c = &hi2c2;
-//  lcd.i2c_addr = LCD_DEFAULT_ADDR;
-//  lcd.backlight_enable = true;
-//  HAL_StatusTypeDef status = LCD_Begin(&lcd);
-  HAL_StatusTypeDef status;
-  BMP280_HandleTypedef bmp280;
-  bmp280_init_default_params(&bmp280.params);
-  bmp280.spi = &hspi1;
-  if (!bmp280_init(&bmp280, &bmp280.params)) {
-          printf("Fehler\n");
-      }
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 
-  if(status != HAL_OK){
-
-  }
-  char space[8]="\r\n";
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
   while (1)
   {
 
-	  bmp280_init(&bmp280, &bmp280.params);
-	  if (bmp280_read_float(&bmp280, &temperature, &pressure, &humidity)==true){
-	  	  sprintf(msg,"%f",temperature);
+	      set_servo_angle(90); // Поворачиваем на 90 градусов
+	      HAL_Delay(2000);
 
-	  	  HAL_UART_Transmit(&huart3, (uint8_t*)space, strlen(msg),HAL_MAX_DELAY);
-	  	  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg),HAL_MAX_DELAY);
+	      set_servo_angle(180); // Поворачиваем на 180 градусов
+	      HAL_Delay(2000);
 
-	  	  sprintf(msg,"%f",pressure);
-	  	  HAL_UART_Transmit(&huart3, (uint8_t*)space, strlen(msg),HAL_MAX_DELAY);
-	  	  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg),HAL_MAX_DELAY);
-
-	  	  sprintf(msg,"%f",humidity);
-	  	  HAL_UART_Transmit(&huart3, (uint8_t*)space, strlen(msg),HAL_MAX_DELAY);
-	  	  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg),HAL_MAX_DELAY);
-
-
-	  }
-	  HAL_Delay(1000);
-
-//	  HAL_ADC_Start(&hadc1);
-//	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-//	  raw = HAL_ADC_GetValue(&hadc1);
-//	  sprintf(msg,"%hu\r\n",raw);
-//	  //HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg),HAL_MAX_DELAY);
-//	  if( raw > 2048){
-//		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, SET);
-//	  } else {
-//		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, RESET);
-//	  }
-//	  char lcdBuf[50];
-//	  sprintf(lcdBuf,"%d", raw);
-//	  LCD_SetCursor(&lcd, 0,0);
-//	  LCD_Printf(&lcd, msg);
-//	  HAL_Delay(1000);
-
-
-
-
+	      set_servo_angle(0); // Возвращаем в начальное положение
+	      HAL_Delay(2000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -220,8 +174,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV8;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
@@ -279,40 +233,51 @@ static void MX_ETH_Init(void)
 }
 
 /**
-  * @brief SPI1 Initialization Function
+  * @brief TIM2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_SPI1_Init(void)
+static void MX_TIM2_Init(void)
 {
 
-  /* USER CODE BEGIN SPI1_Init 0 */
+  /* USER CODE BEGIN TIM2_Init 0 */
 
-  /* USER CODE END SPI1_Init 0 */
+  /* USER CODE END TIM2_Init 0 */
 
-  /* USER CODE BEGIN SPI1_Init 1 */
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
-  /* USER CODE END SPI1_Init 1 */
-  /* SPI1 parameter configuration*/
-  hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_HARD_INPUT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 20999;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 39;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI1_Init 2 */
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
 
-  /* USER CODE END SPI1_Init 2 */
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 
