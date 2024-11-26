@@ -68,11 +68,14 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 void set_servo_angle(uint16_t angle)
 {
-    // Переводим угол в длительность импульса (1-2 мс)
-    float pulse_width =2*(1.0 + (angle / 180.0) * 1.0); // Ширина импульса в мс
-   //uint16_t ccr_value = (pulse_width / 20.0) * 20000; // Рассчитываем значение CCR
+    // Переводим угол в длительно�?ть импуль�?а (1-2 м�?)
+    float pulse_width =1.0 + (angle / 180.0) * 1.0; // Ширина импуль�?а в м�?
+   //uint16_t ccr_value = (pulse_width / 20.0) * 20000; // Ра�?�?читываем значение CCR
+    uint32_t timer_frequency = HAL_RCC_GetPCLK1Freq() / ((htim2.Init.Prescaler + 1) * (htim2.Init.Period + 1));
+    uint16_t ccr_value = (pulse_width * timer_frequency);
+    TIM2->CCR1 = ccr_value;
 
-    TIM2->CCR1 = (uint16_t)pulse_width; // Устанавливаем значение CCR
+    //TIM2->CCR1 = (uint16_t)pulse_width; // У�?танавливаем значение CCR
 }
 /* USER CODE END PFP */
 
@@ -123,14 +126,14 @@ int main(void)
   while (1)
   {
 
-	      set_servo_angle(90); // Поворачиваем на 90 градусов
-	      HAL_Delay(2000);
+	      set_servo_angle(90); // Поворачиваем на 90 граду�?ов
+	      HAL_Delay(5000);
 
-	      set_servo_angle(180); // Поворачиваем на 180 градусов
-	      HAL_Delay(2000);
+	      set_servo_angle(180); // Поворачиваем на 180 граду�?ов
+	      HAL_Delay(1000);
 
 	      set_servo_angle(0); // Возвращаем в начальное положение
-	      HAL_Delay(2000);
+	      HAL_Delay(5000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -174,8 +177,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV8;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
@@ -251,9 +254,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 20999;
+  htim2.Init.Prescaler = 839;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 39;
+  htim2.Init.Period = 999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
