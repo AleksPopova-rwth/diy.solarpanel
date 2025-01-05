@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `diy.solarpanel` project it the project for the 3. semester in RWTH Aachen.
+The `diy.solarpanel` is the project for the 3. semester in RWTH Aachen.
 
 
 ## Features
